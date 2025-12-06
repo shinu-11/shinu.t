@@ -1,0 +1,69 @@
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import cv2 #for user input to load and process external images
+import numpy as np #numerical processing
+
+# ----------------------------------------------------
+# 1. Load MNIST Handwritten Digit Dataset
+# ----------------------------------------------------
+(x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+# Normalize pixel values (0–255) → (0–1)
+x_train = x_train / 255.0
+x_test = x_test / 255.0
+
+# ----------------------------------------------------
+# 2. Build Neural Network Model
+# ----------------------------------------------------
+model = models.Sequential([
+    layers.Flatten(input_shape=(28, 28)),    # Convert image to 1D
+    layers.Dense(128, activation='relu'),     # Hidden layer
+    layers.Dense(10, activation='softmax')    # 10 digits output
+])
+
+# ----------------------------------------------------
+# 3. Compile Model
+# ----------------------------------------------------
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+# ----------------------------------------------------
+# 4. Train Model
+# ----------------------------------------------------
+model.fit(x_train, y_train, epochs=5)
+
+# ----------------------------------------------------
+# 5. Test Accuracy
+# ----------------------------------------------------
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print("Test Accuracy:", test_acc)
+
+def predict_digit_from_image(image_path):
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    if img is None:
+        print(f"Error: Could not load image from {image_path}. Please ensure the file exists and is an image.")
+        return None
+    else:
+        #resize the image
+        img = cv2.resize(img, (28,28))
+        #normalize
+        img = img / 255.0
+        # Expand dimensions to match model input shape (1, 28, 28)
+        img_for_prediction = np.expand_dims(img, axis=0)
+        predictions = model.predict(img_for_prediction)
+        predicted_digit = np.argmax(predictions[0])
+        print(f"Predicted digit for {image_path}: {predicted_digit}")
+        return predicted_digit
+
+# Get two image paths from the user
+img_path1 = input("Enter the path to your first image file (e.g., digit1.png, make sure it's uploaded to Colab): ")
+img_path2 = input("Enter the path to your second image file (e.g., digit2.png, make sure it's uploaded to Colab): ")
+
+# Make predictions for both images
+print("\n--- Predictions ---")
+predict_digit_from_image(img_path1)
+predict_digit_from_image(img_path2)
