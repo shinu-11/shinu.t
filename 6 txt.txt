@@ -1,0 +1,58 @@
+import cv2
+import numpy as np
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input, decode_predictions
+from tensorflow.keras.preprocessing import image
+
+# Load the pre-trained MobileNetV2 model (trained on ImageNet)
+model = MobileNetV2(weights='imagenet')
+
+# List of animal-related classes from ImageNet
+animal_classes = [
+    'n01440764', 'n01443537', 'n01484850', 'n01491361', 'n01494475', 'n01496331', 'n01498041',
+    'n01514668', 'n01514859', 'n01518878', 'n01530575', 'n01531178', 'n01532829', 'n01534433',
+    'n01537544', 'n01558993', 'n01560419', 'n01580077', 'n01582220', 'n01592084', 'n01601694',
+    'n01608432', 'n01614925', 'n01616318', 'n01622779', 'n01629819', 'n01630670', 'n01631663',
+    'n01632458', 'n01632777', 'n01641577', 'n01644373', 'n01644900', 'n01664065', 'n01665541',
+    'n01667114', 'n01667778', 'n01669191', 'n01675722', 'n01677366', 'n01682714', 'n01685808',
+    'n01687978', 'n01688243', 'n01689811', 'n01692333', 'n01693334', 'n01694178', 'n01695060',
+    'n01697457', 'n01698640', 'n01704323', 'n01728572', 'n01728920', 'n01729322', 'n01729977'
+]
+
+# Function to recognize animals in the image
+def recognize_animals(image_path, top_k=5):
+    try:
+        # Load and preprocess the image
+        img = image.load_img(image_path, target_size=(224, 224))
+    except:
+        print("Error: Could not load the image. Check the file path.")
+        return []
+
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = preprocess_input(img_array)
+
+    # Make predictions
+    predictions = model.predict(img_array)
+
+    # Decode predictions
+    decoded = decode_predictions(predictions, top=top_k)[0]
+
+    # Filter animals
+    animals = [(label, score) for imagenet_id, label, score in decoded if imagenet_id in animal_classes]
+
+    return animals
+
+
+# Main program
+if __name__ == "__main__":
+    image_path = input("Enter the path to the image file: ")
+
+    animals = recognize_animals(image_path)
+
+    if animals:
+        print("Recognized animals:")
+        for animal, confidence in animals:
+            print(f"- {animal} (confidence: {confidence:.2f})")
+    else:
+        print("No animals recognized in the image.")
