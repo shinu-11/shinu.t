@@ -1,0 +1,38 @@
+import numpy as np
+
+# ---------------------------
+# Given values
+# ---------------------------
+delta = 0.5
+y_true = np.array([5, 8, 3])
+y_pred = np.array([5.7, 7.8, 3.4])
+n = 3
+
+# ---------------------------
+# Huber Loss Function
+# ---------------------------
+def huber_loss(y, y_hat, delta):
+    error = abs(y - y_hat)
+    
+    if error <= delta:
+        return 0.5 * (error ** 2)       # Quadratic
+    else:
+        return delta * error - 0.5 * (delta ** 2)  # Linear
+
+# ---------------------------
+# Calculate Loss for each sample
+# ---------------------------
+losses = []
+for i in range(n):
+    loss = huber_loss(y_true[i], y_pred[i], delta)
+    losses.append(loss)
+    print(f"Sample {i+1} Loss:", loss)
+
+# ---------------------------
+# Total and Mean Loss
+# ---------------------------
+total_loss = sum(losses)
+mean_loss = total_loss / n
+
+print("\nTotal Huber Loss:", total_loss)
+print("Mean Huber Loss:", mean_loss)
