@@ -1,0 +1,187 @@
+# ======================================================
+# Credit Card Fraud Detection using Deep Learning (ANN)
+# Dataset: creditcard.csv
+# ======================================================
+
+# 1. Import required libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.utils import class_weight
+from sklearn.metrics import confusion_matrix, precision_recall_curve
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping
+
+# ------------------------------------------------------
+# 2. Load dataset
+# ------------------------------------------------------
+data = pd.read_csv("creditcard.csv")
+print("Dataset Shape:", data.shape)
+
+# ------------------------------------------------------
+# 3. Data preprocessing
+# ------------------------------------------------------
+# Scale Amount column
+scaler = StandardScaler()
+data['Amount'] = scaler.fit_transform(data[['Amount']])
+
+# Split features and target
+X = data.drop('Class', axis=1)
+y = data['Class']
+
+# ------------------------------------------------------
+# 4. Train-Test Split
+# ------------------------------------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    stratify=y,
+    random_state=42
+)
+
+# ------------------------------------------------------
+# 5. Handle Class Imbalance
+# ------------------------------------------------------
+weights = class_weight.compute_class_weight(
+    class_weight='balanced',
+    classes=np.unique(y_train),
+    y=y_train
+)
+class_weights = dict(enumerate(weights))
+
+# ------------------------------------------------------
+# 6. Build ANN Model
+# ------------------------------------------------------
+model = Sequential([
+    Dense(32, activation='relu', input_shape=(X_train.shape[1],)),
+    Dropout(0.3),
+    Dense(16, activation='relu'),
+    Dropout(0.3),
+    Dense(1, activation='sigmoid')
+])
+
+# ------------------------------------------------------
+# 7. Compile Model
+# ------------------------------------------------------
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(learning_rate=0.0005),
+    loss='binary_crossentropy',
+    metrics=['accuracy']
+)
+
+# ------------------------------------------------------
+# 8. Early Stopping
+# ------------------------------------------------------
+early_stop = EarlyStopping(
+    monitor='val_loss',
+    patience=3,
+    restore_best_weights=True
+)
+
+# ------------------------------------------------------
+# 9. Train Model
+# ------------------------------------------------------
+history = model.fit(
+    X_train, y_train,
+    epochs=30,
+    batch_size=512,
+    validation_split=0.2,
+    class_weight=class_weights,
+    callbacks=[early_stop],
+    verbose=1
+)
+
+# ------------------------------------------------------
+# 10. Predictions
+# ------------------------------------------------------
+y_pred_prob = model.predict(X_test).ravel()
+y_pred = (y_pred_prob > 0.5).astype(int)
+
+# ------------------------------------------------------
+# 11. GRAPH 1: Training vs Validation Loss
+# ------------------------------------------------------
+plt.figure(figsize=(7,5))
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.xlabel("Epochs")
+plt.ylabel("Loss")
+plt.title("Training vs Validation Loss")
+plt.legend()
+plt.show()
+
+# ------------------------------------------------------
+# 12. Confusion Matrix
+# ------------------------------------------------------
+cm = confusion_matrix(y_test, y_pred)
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Confusion Matrix")
+plt.show()
+
+# ------------------------------------------------------
+# 13. Precision–Recall–F1 vs Threshold
+# ------------------------------------------------------
+precision, recall, thresholds = precision_recall_curve(y_test, y_pred_prob)
+
+f1_scores = np.where(
+    (precision + recall) == 0,
+    0,
+    2 * (precision * recall) / (precision + recall)
+)
+
+plt.figure(figsize=(8,6))
+plt.plot(thresholds, precision[:-1], '--', label='Precision')
+plt.plot(thresholds, recall[:-1], '--', label='Recall')
+plt.plot(thresholds, f1_scores[:-1], label='F1-score')
+plt.xlabel("Threshold")
+plt.ylabel("Score")
+plt.title("Precision, Recall & F1-score vs Threshold")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# ------------------------------------------------------
+# 14. CLEAR RECALL THRESHOLD OUTPUT
+# ------------------------------------------------------
+target_threshold = 0.5
+idx = np.argmin(np.abs(thresholds - target_threshold))
+
+print("\n===== Recall at Threshold =====")
+print(f"Threshold : {thresholds[idx]:.4f}")
+print(f"Precision : {precision[idx]:.4f}")
+print(f"Recall    : {recall[idx]:.4f}")
+print(f"F1-score  : {f1_scores[idx]:.4f}")
+
+# ------------------------------------------------------
+# 15. Threshold with Maximum Recall
+# ------------------------------------------------------
+max_recall_idx = np.argmax(recall)
+
+print("\n===== Maximum Recall =====")
+print(f"Best Recall    : {recall[max_recall_idx]:.4f}")
+print(f"Best Threshold : {thresholds[max_recall_idx]:.4f}")
+
+# ------------------------------------------------------
+# 16. GRAPH: Recall vs Threshold (Clear Visualization)
+# ------------------------------------------------------
+plt.figure(figsize=(8,6))
+plt.plot(thresholds, recall[:-1], label='Recall')
+plt.axvline(
+    thresholds[idx],
+    linestyle='--',
+    label=f"Threshold = {thresholds[idx]:.2f}"
+)
+plt.xlabel("Threshold")
+plt.ylabel("Recall")
+plt.title("Recall vs Threshold")
+plt.legend()
+plt.grid(True)
+plt.show()
