@@ -1,0 +1,39 @@
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+# Load and preprocess image
+img = cv2.imread("/content/WhatsApp Image 2026-02-04 at 4.14.46 PM.jpeg")
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+img = cv2.resize(img, (256,256))
+rgb = img / 255.0
+
+gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+gray = gray / 255.0
+
+X = np.expand_dims(rgb, axis=0)          # (1,256,256,3)
+Y = np.expand_dims(gray, axis=(0,-1))    # (1,256,256,1)
+
+# CNN model
+model = Sequential([
+    Conv2D(32, (3,3), activation='relu', padding='same', input_shape=(256,256,3)),
+    Conv2D(16, (3,3), activation='relu', padding='same'),
+    Conv2D(1, (1,1), activation='linear', padding='same')
+])
+
+model.compile(optimizer='adam', loss='mse')
+model.fit(X, Y, epochs=50, verbose=0)
+
+# Prediction
+pred = model.predict(X)
+cnn_gray = pred[0,:,:,0]
+
+# Display output
+plt.figure(figsize=(10,3))
+plt.subplot(1,3,1); plt.title("RGB"); plt.imshow(rgb); plt.axis("off")
+plt.subplot(1,3,2); plt.title("Target Gray"); plt.imshow(gray, cmap='gray'); plt.axis("off")
+plt.subplot(1,3,3); plt.title("CNN Gray"); plt.imshow(cnn_gray, cmap='gray'); plt.axis("off")
+plt.show()
